@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+type opcode uint16
+
 func readUint16(r io.Reader) (result uint16, err error) {
 	var lo, hi byte
 	var bytes []byte
@@ -17,12 +19,23 @@ func readUint16(r io.Reader) (result uint16, err error) {
 		err = binary.Read(r, binary.LittleEndian, &hi)
 	}
 
+	fmt.Printf("--> lo is %b\n", lo)
+	fmt.Printf("--> hi is %b\n", hi)
+
 	bytes = append(bytes, lo)
 	bytes = append(bytes, hi)
 
 	result = binary.LittleEndian.Uint16(bytes)
 
 	return result, err
+}
+
+func opcodeToString(op uint16) string {
+	switch op {
+	case 21:
+		return "noop"
+	}
+	return "unrecognized"
 }
 
 func main() {
@@ -37,8 +50,10 @@ func main() {
 
 		num, err = readUint16(f)
 
+		op := opcodeToString(num)
+
 		if err == nil {
-			fmt.Println(num)
+			fmt.Printf("%d\t\t=> %s\n", num, op)
 		} else {
 			panic(err)
 		}
