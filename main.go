@@ -9,18 +9,42 @@ import (
 
 type opcode uint16
 
+var OPCODE_STRINGS = [...]string{
+	"halt",
+	"set",
+	"push",
+	"pop",
+	"eq",
+	"gt",
+	"jmp",
+	"jt",
+	"jf",
+	"add",
+	"mult",
+	"mod",
+	"and",
+	"or",
+	"not",
+	"rmem",
+	"wmem",
+	"call",
+	"ret",
+	"out",
+	"in",
+	"noop",
+}
+
+var LEN_OPCODE_STRINGS = len(OPCODE_STRINGS)
+
 func readUint16(r io.Reader) (result uint16, err error) {
 	var lo, hi byte
 	var bytes []byte
 
 	err = binary.Read(r, binary.LittleEndian, &lo)
 
-	if err != nil {
+	if err == nil {
 		err = binary.Read(r, binary.LittleEndian, &hi)
 	}
-
-	fmt.Printf("--> lo is %b\n", lo)
-	fmt.Printf("--> hi is %b\n", hi)
 
 	bytes = append(bytes, lo)
 	bytes = append(bytes, hi)
@@ -31,11 +55,11 @@ func readUint16(r io.Reader) (result uint16, err error) {
 }
 
 func opcodeToString(op uint16) string {
-	switch op {
-	case 21:
-		return "noop"
+	if op < uint16(LEN_OPCODE_STRINGS) {
+		return OPCODE_STRINGS[op]
+	} else {
+		return "unrecognized"
 	}
-	return "unrecognized"
 }
 
 func main() {
@@ -45,7 +69,7 @@ func main() {
 		panic(err)
 	}
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 16; i++ {
 		var num uint16
 
 		num, err = readUint16(f)
