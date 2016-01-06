@@ -1,40 +1,14 @@
 package main
 
 import (
+	"bitbucket.org/nmuth/synacor-go/synacor"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"os"
 )
 
-type opcode uint16
-
-var OPCODE_STRINGS = [...]string{
-	"halt",
-	"set",
-	"push",
-	"pop",
-	"eq",
-	"gt",
-	"jmp",
-	"jt",
-	"jf",
-	"add",
-	"mult",
-	"mod",
-	"and",
-	"or",
-	"not",
-	"rmem",
-	"wmem",
-	"call",
-	"ret",
-	"out",
-	"in",
-	"noop",
-}
-
-var LEN_OPCODE_STRINGS = len(OPCODE_STRINGS)
+var fileInput io.Reader
 
 func readUint16(r io.Reader) (result uint16, err error) {
 	var lo, hi byte
@@ -54,34 +28,89 @@ func readUint16(r io.Reader) (result uint16, err error) {
 	return result, err
 }
 
-func opcodeToString(op uint16) string {
-	if op < uint16(LEN_OPCODE_STRINGS) {
-		return OPCODE_STRINGS[op]
+func nextOpcode() (result synacor.Opcode, err error) {
+	num, err := readUint16(fileInput)
+
+	if err == nil {
+		result = synacor.Opcode(num)
+	}
+
+	return result, err
+}
+
+func nextRegister() (result synacor.Register, err error) {
+	return result, err
+}
+
+func nextValue() (result uint16, err error) {
+	return result, err
+}
+
+func doSet(register synacor.Register, value uint16) {
+
+}
+
+func vmHalt() {
+	panic("program halted")
+}
+
+func execOpcode(op synacor.Opcode) {
+	switch op {
+	case synacor.Halt:
+		vmHalt()
+	case synacor.Set:
+		register, err := nextRegister()
+		value, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, value)
+		}
+	case synacor.Noop:
+		// do nothing
+	default:
+		panic("unrecognized instruction")
+	}
+}
+
+func opcodeToString(op synacor.Opcode) string {
+	if op < synacor.Opcode(synacor.LEN_OPCODE_STRINGS) {
+		return synacor.OPCODE_STRINGS[op]
 	} else {
 		return "unrecognized"
 	}
 }
 
 func main() {
-	f, err := os.Open("data/challenge.bin")
+	defer func() {
+		if r := recover(); r != nil {
+			if r == "program halted" {
+				os.Exit(0)
+			} else {
+				fmt.Println(r)
+				os.Exit(1)
+			}
+		}
+	}()
+
+	fileInput, err := os.Open("testbin")
 
 	if err != nil {
 		panic(err)
 	}
 
-	for i := 0; i < 16; i++ {
-		var num uint16
-
-		num, err = readUint16(f)
-
-		op := opcodeToString(num)
-
-		if err == nil {
-			fmt.Printf("%d\t\t=> %s\n", num, op)
-		} else {
+	for opcode, err := nextOpcode(); err != io.EOF; opcode, err = nextOpcode() {
+		if err != nil {
 			panic(err)
 		}
+
+		execOpcode(opcode)
+
+		opName := opcodeToString(opcode)
+
+		fmt.Printf("%d\t\t=> %s\n", opcode, opName)
 	}
 
-	defer f.Close()
+	defer fileInput.Close()
 }
