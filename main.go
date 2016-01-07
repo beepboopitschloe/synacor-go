@@ -9,9 +9,29 @@ import (
 )
 
 var EXIT_HALT = "program halted"
+var EXIT_UNRECOGNIZED_INSTR = "unrecognized instruction"
 
-func doSet(register synacor.Register, value uint16) {
+var fileInput io.Reader
+var machine synacor.Machine
 
+func nextOpcode() (synacor.Opcode, error) {
+	return parser.NextOpcode(fileInput)
+}
+
+func nextRegister() (uint16, error) {
+	return parser.NextRegister(fileInput)
+}
+
+func nextValue() (uint16, error) {
+	return parser.NextValue(fileInput, machine)
+}
+
+func doSet(register uint16, value uint16) {
+	fmt.Printf("[DEBUG] setting value of register %d to %d\n", register, value)
+
+	machine.Registers[register] = value
+
+	fmt.Printf("[DEBUG] value of register %d is now %d\n", register, machine.Registers[register])
 }
 
 func vmHalt() {
@@ -23,18 +43,42 @@ func execOpcode(op synacor.Opcode) {
 	case synacor.Halt:
 		vmHalt()
 	case synacor.Set:
-		register, err := parser.NextRegister()
-		value, err := parser.NextValue()
+		register, err := nextRegister()
+		value, err := nextValue()
 
 		if err != nil {
 			panic(err)
 		} else {
 			doSet(register, value)
 		}
+	case synacor.Add:
+		register, err := nextRegister()
+
+		a, err := nextValue()
+		b, err := nextValue()
+
+		fmt.Printf("[DEBUG] storing into register %d : %d + %d = %d\n",
+			register, a, b, (a+b)%32768)
+
+		if err != nil {
+			panic(err)
+		}
+
+		value := (a + b) % 32768
+
+		doSet(register, value)
+	case synacor.Out:
+		asciiCode, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			fmt.Printf("%c", asciiCode)
+		}
 	case synacor.Noop:
 		// do nothing
 	default:
-		panic("unrecognized instruction")
+		panic(EXIT_UNRECOGNIZED_INSTR)
 	}
 }
 
@@ -51,24 +95,35 @@ func main() {
 		if r := recover(); r != nil {
 			if r == EXIT_HALT {
 				os.Exit(0)
+			} else if r == EXIT_UNRECOGNIZED_INSTR {
+				fmt.Println("user error: unrecognized instruction")
+				os.Exit(1)
 			} else {
 				fmt.Println(r)
-				os.Exit(1)
+				os.Exit(2)
 			}
 		}
 	}()
 
-	fileInput, err := os.Open("testbin")
-	defer fileInput.Close()
+	fmt.Println("[DEBUG] opening ./testbin")
 
-	parser.SetFileInput(fileInput)
+	f, err := os.Open("testbin")
+	defer f.Close()
+
+	fileInput = f
+
+	fmt.Println("[DEBUG] creating machine")
+
+	machine = synacor.Machine{}
 
 	if err != nil {
 		panic(err)
 	}
 
-	for opcode, err := parser.NextOpcode(); err != io.EOF; opcode, err = parser.NextOpcode() {
+	fmt.Println("[DEBUG] begin reading instructions")
+	for opcode, err := nextOpcode(); err != io.EOF; opcode, err = nextOpcode() {
 		if err != nil {
+			fmt.Println("[DEBUG] error reading instruction")
 			panic(err)
 		}
 
