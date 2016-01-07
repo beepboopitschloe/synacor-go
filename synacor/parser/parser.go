@@ -4,7 +4,6 @@ import (
 	"bitbucket.org/nmuth/synacor-go/synacor"
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 )
 
@@ -76,17 +75,17 @@ func NextRegister(fileInput io.Reader) (result uint16, err error) {
 // return the literal. If the value is a register, return the current value of
 // the register.
 func NextValue(fileInput io.Reader, machine synacor.Machine) (result uint16, err error) {
-	fmt.Println("[--- Begin NextValue ---]")
+	//fmt.Println("[--- Begin NextValue ---]")
 
 	num, err := readUint16(fileInput)
 
-	fmt.Printf("[NextValue] raw uint16 was %s\n", num)
+	//fmt.Printf("[NextValue] raw uint16 was %s\n", num)
 
 	if err == nil && isRegister(num) {
 		register, err := numToRegister(num)
 
-		fmt.Printf("[NextValue] reading value from register %d\n", register)
-		fmt.Println("[NextValue] machine is", machine)
+		//fmt.Printf("[NextValue] reading value from register %d\n", register)
+		//fmt.Println("[NextValue] machine is", machine)
 
 		if err != nil {
 			panic(err)
@@ -97,13 +96,13 @@ func NextValue(fileInput io.Reader, machine synacor.Machine) (result uint16, err
 		result = num
 	}
 
-	fmt.Printf("[NextValue] result is %d\n", result)
+	//fmt.Printf("[NextValue] result is %d\n", result)
 
 	if err != nil {
-		fmt.Println("[NextValue] error is ", err)
+		//fmt.Println("[NextValue] error is ", err)
 	}
 
-	fmt.Println("[---  End NextValue  ---]")
+	//fmt.Println("[---  End NextValue  ---]")
 
 	return result, err
 }

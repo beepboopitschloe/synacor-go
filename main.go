@@ -14,6 +14,8 @@ var EXIT_UNRECOGNIZED_INSTR = "unrecognized instruction"
 var fileInput io.Reader
 var machine synacor.Machine
 
+var debug = false
+
 func nextOpcode() (synacor.Opcode, error) {
 	return parser.NextOpcode(fileInput)
 }
@@ -27,11 +29,15 @@ func nextValue() (uint16, error) {
 }
 
 func doSet(register uint16, value uint16) {
-	fmt.Printf("[DEBUG] setting value of register %d to %d\n", register, value)
+	if debug {
+		fmt.Printf("[DEBUG] setting value of register %d to %d\n", register, value)
+	}
 
 	machine.Registers[register] = value
 
-	fmt.Printf("[DEBUG] value of register %d is now %d\n", register, machine.Registers[register])
+	if debug {
+		fmt.Printf("[DEBUG] value of register %d is now %d\n", register, machine.Registers[register])
+	}
 }
 
 func vmHalt() {
@@ -57,8 +63,10 @@ func execOpcode(op synacor.Opcode) {
 		a, err := nextValue()
 		b, err := nextValue()
 
-		fmt.Printf("[DEBUG] storing into register %d : %d + %d = %d\n",
-			register, a, b, (a+b)%32768)
+		if debug {
+			fmt.Printf("[DEBUG] storing into register %d : %d + %d = %d\n",
+				register, a, b, (a+b)%32768)
+		}
 
 		if err != nil {
 			panic(err)
@@ -69,6 +77,8 @@ func execOpcode(op synacor.Opcode) {
 		doSet(register, value)
 	case synacor.Out:
 		asciiCode, err := nextValue()
+
+		fmt.Println("found ascii", asciiCode)
 
 		if err != nil {
 			panic(err)
@@ -105,14 +115,18 @@ func main() {
 		}
 	}()
 
-	fmt.Println("[DEBUG] opening ./testbin")
+	if debug {
+		fmt.Println("[DEBUG] opening ./testbin")
+	}
 
 	f, err := os.Open("testbin")
 	defer f.Close()
 
 	fileInput = f
 
-	fmt.Println("[DEBUG] creating machine")
+	if debug {
+		fmt.Println("[DEBUG] creating machine")
+	}
 
 	machine = synacor.Machine{}
 
@@ -120,7 +134,10 @@ func main() {
 		panic(err)
 	}
 
-	fmt.Println("[DEBUG] begin reading instructions")
+	if debug {
+		fmt.Println("[DEBUG] begin reading instructions")
+	}
+
 	for opcode, err := nextOpcode(); err != io.EOF; opcode, err = nextOpcode() {
 		if err != nil {
 			fmt.Println("[DEBUG] error reading instruction")
@@ -129,10 +146,14 @@ func main() {
 
 		opName := opcodeToString(opcode)
 
-		fmt.Printf("[DEBUG] exec %d (%s)\n", opcode, opName)
+		if debug {
+			fmt.Printf("[DEBUG] exec %d (%s)\n", opcode, opName)
+		}
 
 		execOpcode(opcode)
 	}
 
-	fmt.Printf("[DEBUG] reached EOF\n")
+	if debug {
+		fmt.Printf("[DEBUG] reached EOF\n")
+	}
 }
