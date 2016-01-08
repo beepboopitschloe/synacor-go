@@ -54,13 +54,45 @@ func execOpcode(op synacor.Opcode) {
 			doSet(register, value)
 		}
 	case synacor.Push:
-		fallthrough
+		val, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			machine.PushStack(val)
+		}
 	case synacor.Pop:
-		fallthrough
+		register, err := nextRegister()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, machine.PopStack())
+		}
 	case synacor.Eq:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+		b, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else if a == b {
+			doSet(register, 1)
+		} else {
+			doSet(register, 0)
+		}
 	case synacor.Gt:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+		b, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else if a > b {
+			doSet(register, 1)
+		} else {
+			doSet(register, 0)
+		}
 	case synacor.Jmp:
 		fallthrough
 	case synacor.Jt:
@@ -83,15 +115,54 @@ func execOpcode(op synacor.Opcode) {
 
 		doSet(register, value)
 	case synacor.Mult:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+		b, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, (a*b)%32768)
+		}
 	case synacor.Mod:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+		b, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, a%b)
+		}
 	case synacor.And:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+		b, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, a&b)
+		}
 	case synacor.Or:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+		b, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, a|b)
+		}
 	case synacor.Not:
-		fallthrough
+		register, err := nextRegister()
+		a, err := nextValue()
+
+		if err != nil {
+			panic(err)
+		} else {
+			doSet(register, a^0xff)
+		}
 	case synacor.Rmem:
 		fallthrough
 	case synacor.Wmem:
