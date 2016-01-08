@@ -54,6 +54,18 @@ func execOpcode(op synacor.Opcode) {
 			doSet(register, value)
 		}
 	case synacor.Push:
+		fallthrough
+	case synacor.Pop:
+		fallthrough
+	case synacor.Eq:
+		fallthrough
+	case synacor.Gt:
+		fallthrough
+	case synacor.Jmp:
+		fallthrough
+	case synacor.Jt:
+		fallthrough
+	case synacor.Jf:
 		panic(EXIT_NOT_IMPLEMENTED)
 	case synacor.Add:
 		register, err := nextRegister()
@@ -70,6 +82,24 @@ func execOpcode(op synacor.Opcode) {
 		value := (a + b) % 32768
 
 		doSet(register, value)
+	case synacor.Mult:
+		fallthrough
+	case synacor.Mod:
+		fallthrough
+	case synacor.And:
+		fallthrough
+	case synacor.Or:
+		fallthrough
+	case synacor.Not:
+		fallthrough
+	case synacor.Rmem:
+		fallthrough
+	case synacor.Wmem:
+		fallthrough
+	case synacor.Call:
+		fallthrough
+	case synacor.Ret:
+		panic(EXIT_NOT_IMPLEMENTED)
 	case synacor.Out:
 		asciiCode, err := nextValue()
 
@@ -80,6 +110,8 @@ func execOpcode(op synacor.Opcode) {
 			// of using fmt
 			fmt.Print(string(asciiCode))
 		}
+	case synacor.In:
+		panic(EXIT_NOT_IMPLEMENTED)
 	case synacor.Noop:
 		// do nothing
 	default:
@@ -119,9 +151,9 @@ func main() {
 		panic(err)
 	}
 
-	log.Println("[DEBUG] opening ./testbin")
+	log.Println("[DEBUG] opening ./data/challenge.bin")
 
-	f, err := os.Open("testbin")
+	f, err := os.Open("data/challenge.bin")
 	defer f.Close()
 
 	fileInput = f
