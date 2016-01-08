@@ -1,4 +1,4 @@
-package synacor
+package machine
 
 import (
 	"testing"
