@@ -3,6 +3,7 @@ package machine
 import (
 	"bitbucket.org/nmuth/synacor-go/synacor/opcode"
 	"bitbucket.org/nmuth/synacor-go/synacor/parser"
+	"bufio"
 	"errors"
 	"fmt"
 	"io"
@@ -26,13 +27,18 @@ type Machine struct {
 	Registers [8]uint16
 	InstrPtr  uint16
 	Memory    [32768]uint16
-	stack     []uint16
+
+	stdin  *bufio.Reader
+	stdout *bufio.Writer
+	stack  []uint16
 }
 
 // create a new virtual machine
 func NewMachine() Machine {
 	m := Machine{}
 
+	m.stdin = bufio.NewReader(os.Stdin)
+	m.stdout = bufio.NewWriter(os.Stdout)
 	m.stack = make([]uint16, 0, INITIAL_STACK_CAPACITY)
 
 	return m
@@ -45,11 +51,16 @@ func (m *Machine) PushStack(val uint16) {
 
 // pop a value off the stack
 func (m *Machine) PopStack() (result uint16) {
-	result = m.stack[len(m.stack)-1]
+	if len(m.stack) > 0 {
+		result = m.stack[len(m.stack)-1]
 
-	m.stack = m.stack[0 : len(m.stack)-1]
+		m.stack = m.stack[0 : len(m.stack)-1]
 
-	return result
+		return result
+	} else {
+		// @TODO return error
+		panic("stack empty")
+	}
 }
 
 // Tell whether the given number is a register address.
@@ -86,7 +97,6 @@ func (m *Machine) NextRegister() (result uint16) {
 
 // read a value from memory and increment the instruction pointer
 func (m *Machine) NextValue() (result uint16) {
-	log.Printf("reading from memory, instrptr is %d\n", m.InstrPtr)
 	result = m.Memory[m.InstrPtr]
 
 	m.InstrPtr += 1
@@ -99,11 +109,7 @@ func (m *Machine) NextValue() (result uint16) {
 			log.Println("[ERROR] tried to use %d as a register index\n", result)
 			panic(err)
 		}
-
-		log.Printf("reading value %d of register %d\n", result, register)
 	}
-
-	log.Printf("done reading from memory, instrptr is %d\n", m.InstrPtr)
 
 	return result
 }
@@ -134,8 +140,6 @@ func (m *Machine) Execute() {
 func (m *Machine) ExecuteNextInstruction() {
 	op := opcode.Opcode(m.Memory[m.InstrPtr])
 	m.InstrPtr += 1
-
-	log.Printf("[DEBUG] executing %s (%d)\n", opcode.OpcodeToString(op), op)
 
 	switch op {
 	case opcode.Halt:
@@ -191,8 +195,6 @@ func (m *Machine) DoSet() {
 	reg := m.NextRegister()
 	val := m.NextValue()
 
-	log.Printf("[DEBUG] setting register %d to value %d\n", reg, val)
-
 	m.Registers[reg] = val
 }
 
@@ -233,15 +235,27 @@ func (m *Machine) DoGt() {
 }
 
 func (m *Machine) DoJmp() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	target := m.NextValue()
+
+	m.InstrPtr = target
 }
 
 func (m *Machine) DoJt() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	a := m.NextValue()
+	target := m.NextValue()
+
+	if a != 0 {
+		m.InstrPtr = target
+	}
 }
 
 func (m *Machine) DoJf() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	a := m.NextValue()
+	target := m.NextValue()
+
+	if a == 0 {
+		m.InstrPtr = target
+	}
 }
 
 func (m *Machine) DoAdd() {
@@ -250,8 +264,6 @@ func (m *Machine) DoAdd() {
 	b := m.NextValue()
 
 	value := (a + b) % 32768
-
-	log.Printf("[DEBUG] storing (%d + %d = %d) into register %d\n", a, b, value, reg)
 
 	m.Registers[reg] = value
 }
@@ -300,25 +312,40 @@ func (m *Machine) DoNot() {
 	reg := m.NextRegister()
 	a := m.NextValue()
 
-	value := (a ^ 0xff) % 32768
+	value := (a ^ 0xffff) % 32768
 
 	m.Registers[reg] = value
 }
 
 func (m *Machine) DoRmem() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	reg := m.NextRegister()
+	addr := m.NextValue()
+
+	// @TODO handle out of bounds errors
+	m.Registers[reg] = m.Memory[addr]
 }
 
 func (m *Machine) DoWmem() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	addr := m.NextValue()
+	val := m.NextValue()
+
+	// @TODO handle out of bounds errors
+	m.Memory[addr] = val
 }
 
 func (m *Machine) DoCall() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	target := m.NextValue()
+
+	m.PushStack(m.InstrPtr)
+
+	m.InstrPtr = target
 }
 
 func (m *Machine) DoRet() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	// @TODO halt if stack is empty
+	target := m.PopStack()
+
+	m.InstrPtr = target
 }
 
 func (m *Machine) DoOut() {
@@ -330,7 +357,19 @@ func (m *Machine) DoOut() {
 }
 
 func (m *Machine) DoIn() {
-	panic(EXIT_NOT_IMPLEMENTED)
+	input, err := m.stdin.ReadByte()
+
+	if err != nil && err != io.EOF {
+		panic(err)
+	}
+
+	log.Printf("[DEBUG] read %c from stdin\n", input)
+
+	reg := m.NextRegister()
+
+	log.Printf("[DEBUG] setting %d to value %d from stdin\n", reg, input)
+
+	m.Registers[reg] = uint16(input)
 }
 
 // load an executable binary into memory
