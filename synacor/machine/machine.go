@@ -5,7 +5,6 @@ import (
 	"bitbucket.org/nmuth/synacor-go/synacor/parser"
 	"bufio"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os"
@@ -349,11 +348,12 @@ func (m *Machine) DoRet() {
 }
 
 func (m *Machine) DoOut() {
-	asciiCode := m.NextValue()
+	asciiCode := byte(m.NextValue())
 
-	// @TODO this should be a method on Machine
-	// @TODO this should use a buffer
-	fmt.Print(string(asciiCode))
+	m.stdout.WriteByte(asciiCode)
+
+	// @TODO don't flush after every char
+	m.stdout.Flush()
 }
 
 func (m *Machine) DoIn() {
