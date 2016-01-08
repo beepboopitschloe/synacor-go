@@ -78,12 +78,12 @@ func execOpcode(op synacor.Opcode) {
 	case synacor.Out:
 		asciiCode, err := nextValue()
 
-		fmt.Println("found ascii", asciiCode)
-
 		if err != nil {
 			panic(err)
 		} else {
-			fmt.Printf("%c", asciiCode)
+			// this might be slightly faster if we wrote asciiCode to a buffer instead
+			// of using fmt
+			fmt.Print(string(asciiCode))
 		}
 	case synacor.Noop:
 		// do nothing
