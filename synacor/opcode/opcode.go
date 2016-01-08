@@ -1,4 +1,4 @@
-package synacor
+package opcode
 
 type Opcode uint16
 
@@ -53,3 +53,11 @@ const (
 	In
 	Noop
 )
+
+func OpcodeToString(op Opcode) string {
+	if op < Opcode(LEN_OPCODE_STRINGS) {
+		return OPCODE_STRINGS[op]
+	} else {
+		return "unrecognized"
+	}
+}

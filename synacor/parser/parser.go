@@ -1,7 +1,7 @@
 package parser
 
 import (
-	"bitbucket.org/nmuth/synacor-go/synacor"
+	"bitbucket.org/nmuth/synacor-go/synacor/opcode"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -33,11 +33,11 @@ func NextCodepoint(r io.Reader) (result uint16, err error) {
 }
 
 // Read a register address from the file input.
-func NextOpcode(fileInput io.Reader) (result synacor.Opcode, err error) {
+func NextOpcode(fileInput io.Reader) (result opcode.Opcode, err error) {
 	num, err := NextCodepoint(fileInput)
 
 	if err == nil {
-		result = synacor.Opcode(num)
+		result = opcode.Opcode(num)
 	}
 
 	return result, err
