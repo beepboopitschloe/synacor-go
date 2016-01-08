@@ -5,16 +5,16 @@ import (
 	"bitbucket.org/nmuth/synacor-go/synacor/parser"
 	"fmt"
 	"io"
+	"log"
 	"os"
 )
 
 var EXIT_HALT = "program halted"
 var EXIT_UNRECOGNIZED_INSTR = "unrecognized instruction"
+var EXIT_NOT_IMPLEMENTED = "not implemented"
 
 var fileInput io.Reader
 var machine synacor.Machine
-
-var debug = false
 
 func nextOpcode() (synacor.Opcode, error) {
 	return parser.NextOpcode(fileInput)
@@ -29,15 +29,11 @@ func nextValue() (uint16, error) {
 }
 
 func doSet(register uint16, value uint16) {
-	if debug {
-		fmt.Printf("[DEBUG] setting value of register %d to %d\n", register, value)
-	}
+	log.Printf("[DEBUG] setting value of register %d to %d\n", register, value)
 
 	machine.Registers[register] = value
 
-	if debug {
-		fmt.Printf("[DEBUG] value of register %d is now %d\n", register, machine.Registers[register])
-	}
+	log.Printf("[DEBUG] value of register %d is now %d\n", register, machine.Registers[register])
 }
 
 func vmHalt() {
@@ -57,16 +53,15 @@ func execOpcode(op synacor.Opcode) {
 		} else {
 			doSet(register, value)
 		}
+	case synacor.Push:
+		panic(EXIT_NOT_IMPLEMENTED)
 	case synacor.Add:
 		register, err := nextRegister()
 
 		a, err := nextValue()
 		b, err := nextValue()
 
-		if debug {
-			fmt.Printf("[DEBUG] storing into register %d : %d + %d = %d\n",
-				register, a, b, (a+b)%32768)
-		}
+		log.Printf("[DEBUG] storing into register %d : %d + %d = %d\n", register, a, b, (a+b)%32768)
 
 		if err != nil {
 			panic(err)
@@ -106,27 +101,32 @@ func main() {
 			if r == EXIT_HALT {
 				os.Exit(0)
 			} else if r == EXIT_UNRECOGNIZED_INSTR {
-				fmt.Println("user error: unrecognized instruction")
-				os.Exit(1)
+				log.Fatalln("user error: unrecognized instruction")
+			} else if r == EXIT_NOT_IMPLEMENTED {
+				log.Fatalln("system error: instruction not implemented")
 			} else {
-				fmt.Println(r)
-				os.Exit(2)
+				log.Panicln(r)
 			}
 		}
 	}()
 
-	if debug {
-		fmt.Println("[DEBUG] opening ./testbin")
+	output, err := os.Create("output")
+	defer output.Close()
+
+	log.SetOutput(output)
+
+	if err != nil {
+		panic(err)
 	}
+
+	log.Println("[DEBUG] opening ./testbin")
 
 	f, err := os.Open("testbin")
 	defer f.Close()
 
 	fileInput = f
 
-	if debug {
-		fmt.Println("[DEBUG] creating machine")
-	}
+	log.Println("[DEBUG] creating machine")
 
 	machine = synacor.Machine{}
 
@@ -134,26 +134,19 @@ func main() {
 		panic(err)
 	}
 
-	if debug {
-		fmt.Println("[DEBUG] begin reading instructions")
-	}
+	log.Println("[DEBUG] begin reading instructions")
 
 	for opcode, err := nextOpcode(); err != io.EOF; opcode, err = nextOpcode() {
 		if err != nil {
-			fmt.Println("[DEBUG] error reading instruction")
-			panic(err)
+			log.Panicln("[DEBUG] error reading instruction")
 		}
 
 		opName := opcodeToString(opcode)
 
-		if debug {
-			fmt.Printf("[DEBUG] exec %d (%s)\n", opcode, opName)
-		}
+		log.Printf("[DEBUG] exec %d (%s)\n", opcode, opName)
 
 		execOpcode(opcode)
 	}
 
-	if debug {
-		fmt.Printf("[DEBUG] reached EOF\n")
-	}
+	log.Printf("[DEBUG] reached EOF\n")
 }
