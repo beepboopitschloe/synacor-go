@@ -7,8 +7,8 @@ This is an implementation of the
 
 Assuming you have Go [installed](https://golang.org/dl/):
 
-    go get bitbucket.org/nmuth/synacor-go
-    cd $GOPATH/bitbucket.org/nmuth/synacor-go
+    go get github.com/nmuth/synacor-go
+    cd $GOPATH/github.com/nmuth/synacor-go
     go build
     ./synacor-go data/challenge.bin
 
